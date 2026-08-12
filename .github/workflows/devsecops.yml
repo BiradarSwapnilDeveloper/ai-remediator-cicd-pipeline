@@ -72,6 +72,7 @@ jobs:
       # Send WhatsApp Notification if Vulnerabilities exist
       - name: "📱 Send WhatsApp Notification"
         if: always()
+        continue-on-error: true
         env:
           WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
           WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
@@ -94,6 +95,7 @@ jobs:
       # Send Telegram Notification
       - name: "✈️ Send Telegram Security Alert"
         if: always()
+        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
