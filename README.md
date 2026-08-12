@@ -1,4 +1,4 @@
-# PixelCraft AI - Secured with Advanced DevSecOps Pipeline
+# PixelCraft AI - Secured with Advanced Self-Healing DevSecOps CI/CD Pipeline
 
 [![DevSecOps Pipeline](https://img.shields.io/badge/CI%2FCD-DevSecOps-0052CC?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/)
 [![Security Scan](https://img.shields.io/badge/Security-Trivy%20%7C%20TruffleHog%20%7C%20Snyk-1E88E5?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/)
