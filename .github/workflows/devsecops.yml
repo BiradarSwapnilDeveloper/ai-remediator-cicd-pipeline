@@ -6,11 +6,12 @@ on:
   pull_request:
     branches: [ "*" ]
   workflow_dispatch:
+    
 
 jobs:
-  # ============================================================
+
   # JOB 1: Scan karo, AI se fix karwao, aur wapas push karo
-  # ============================================================
+  # =========================================================
   scan-and-fix:
     name: "🔍 Scan & 🤖 AI Auto-Fix"
     runs-on: ubuntu-latest
