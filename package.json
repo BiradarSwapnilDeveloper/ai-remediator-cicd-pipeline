@@ -1,7 +1,7 @@
 {
   "name": "ai-tools-website",
   "version": "1.0.0",
-  "description": "PixelCraft AI is a suite of professional, browser-based image editing tools. All processing happens locally on your device, ensuring maximum privacy and speed. No sign-up, no server uploads, 100% free.",
+  "description": "PixelCraft AI is a suite of professional, browser-based image editing tools.",
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
@@ -15,10 +15,6 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/BiradarSwapnilDeveloper/PixelCraft-AI/issues"
-  },
-  "homepage": "https://github.com/BiradarSwapnilDeveloper/PixelCraft-AI#readme",
   "dependencies": {
     "axios": "^1.18.0",
     "canvas": "^3.2.3",

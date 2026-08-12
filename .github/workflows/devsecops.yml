@@ -6,11 +6,12 @@ on:
   pull_request:
     branches: [ "*" ]
   workflow_dispatch:
+    
 
 jobs:
-  # ============================================================
+
   # JOB 1: Scan karo, AI se fix karwao, aur wapas push karo
-  # ============================================================
+  # =========================================================
   scan-and-fix:
     name: "🔍 Scan & 🤖 AI Auto-Fix"
     runs-on: ubuntu-latest
@@ -68,28 +69,6 @@ jobs:
         with:
           name: trivy-report-html
           path: trivy-report.html
-
-      # Send WhatsApp Notification if Vulnerabilities exist
-      - name: "📱 Send WhatsApp Notification"
-        if: always()
-        env:
-          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
-          WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
-        run: |
-          # Check if Trivy found any vulnerabilities
-          if grep -q '"Vulnerabilities":' trivy-results.json; then
-             RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-             MESSAGE="🚨 *PixelCraft AI Alert!* 🚨%0A%0AHigh/Critical Vulnerabilities found in the latest push!%0A%0AThe AI is attempting to auto-fix them. Check the full report directly here (No ZIP required):%0A$RUN_URL"
-             
-             if [ -n "$WHATSAPP_PHONE" ] && [ -n "$WHATSAPP_API_KEY" ]; then
-                curl -s -X GET "https://api.callmebot.com/whatsapp.php?phone=$WHATSAPP_PHONE&text=$MESSAGE&apikey=$WHATSAPP_API_KEY"
-                echo "✅ WhatsApp notification sent!"
-             else
-                echo "ℹ️ WhatsApp credentials not found in secrets. Skipping notification."
-             fi
-          else
-             echo "ℹ️ No vulnerabilities found. No WhatsApp message sent."
-          fi
 
       # Send Telegram Notification
       - name: "✈️ Send Telegram Security Alert"
