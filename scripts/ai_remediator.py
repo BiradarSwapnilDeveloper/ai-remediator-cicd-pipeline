@@ -3,6 +3,7 @@ import os
 import requests
 import subprocess
 import sys
+from google import genai
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -85,14 +86,13 @@ Vulnerabilities:
 {vuln_details}"""
 
     api_key = GEMINI_API_KEY.strip() if GEMINI_API_KEY else ""
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    headers = {"Content-Type": "application/json"}
-    data = {"contents": [{"parts": [{"text": prompt}]}]}
-
     try:
-        response = requests.post(url, headers=headers, json=data)
-        response.raise_for_status()
-        res_text = response.json()['candidates'][0]['content']['parts'][0]['text']
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=prompt
+        )
+        res_text = response.text
         log_debug("Gemini Response:\n" + res_text)
         return res_text
     except Exception as e:

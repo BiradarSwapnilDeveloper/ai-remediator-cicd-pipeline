@@ -96,7 +96,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          pip install requests --quiet
+          pip install requests google-genai --quiet
           python scripts/ai_remediator.py
 
       - name: "Upload AI Debug Log"
