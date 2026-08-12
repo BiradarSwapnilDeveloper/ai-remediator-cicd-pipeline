@@ -130,7 +130,7 @@ jobs:
       - name: "🤖 AI Auto-Remediator (Gemini)"
         if: always()
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API }}
         run: |
           pip install requests --quiet
           python scripts/ai_remediator.py
@@ -189,7 +189,7 @@ jobs:
       - name: "🔒 Snyk Final Security Gate"
         uses: snyk/actions/node@master
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_TOKEN: ${{ secrets.SYNK_TOKEN }}
         with:
           command: test
           args: --severity-threshold=high
