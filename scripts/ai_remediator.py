@@ -89,7 +89,7 @@ Vulnerabilities:
     try:
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-flash-latest',
             contents=prompt
         )
         res_text = response.text
