@@ -3,6 +3,7 @@ import os
 import requests
 import subprocess
 import sys
+import time
 from google import genai
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -86,18 +87,26 @@ Vulnerabilities:
 {vuln_details}"""
 
     api_key = GEMINI_API_KEY.strip() if GEMINI_API_KEY else ""
-    try:
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=prompt
-        )
-        res_text = response.text
-        log_debug("Gemini Response:\n" + res_text)
-        return res_text
-    except Exception as e:
-        log_debug(f"Gemini API Error: {e}")
-        return None
+    client = genai.Client(api_key=api_key)
+    
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            res_text = response.text
+            log_debug("Gemini Response:\n" + res_text)
+            return res_text
+        except Exception as e:
+            log_debug(f"Gemini API Error on attempt {attempt + 1}: {e}")
+            if "503" in str(e) or "429" in str(e):
+                time.sleep(5)
+            else:
+                return None
+                
+    log_debug("Failed after 3 retries due to high demand.")
+    return None
 
 def apply_ai_fix(commands_text):
     if not commands_text:
