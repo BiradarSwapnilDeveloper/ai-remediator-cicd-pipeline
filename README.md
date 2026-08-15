@@ -13,7 +13,7 @@
 
 ![PixelCraft AI DevSecOps Pipeline Architecture](https://raw.githubusercontent.com/vaseflamingoseguru205-debug/PixelCraft_AI/main/architecture.jpg)
 
-While PixelCraft AI delivers frontend capabilities, its core engineering foundation relies on an automated, multi-gate CI/CD infrastructure leveraging **GitHub Actions**, enterprise security scanners, and **GenAI-powered auto-remediation**.
+AI delivers frontend capabilities, its core engineering foundation relies on an automated, multi-gate CI/CD infrastructure leveraging **GitHub Actions**, enterprise security scanners, and **GenAI-powered auto-remediation**.
 
 The pipeline enforces zero hardcoded secrets, zero unpatched vulnerability dependencies across all severities (Critical, High, Medium, Low), and strict compliance checks prior to deployment.
 
