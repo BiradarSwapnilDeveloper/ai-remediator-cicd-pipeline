@@ -172,6 +172,7 @@ jobs:
         if: always()
         run: |
           rm -f trivy-results.json trivy-report.html html.tpl ai_debug.log zero-trust-iam-policy.json ai-red-team-report.md
+          rm -rf .cache
 
       - name: "🚀 Create Pull Request for AI Fixes"
         if: always()
