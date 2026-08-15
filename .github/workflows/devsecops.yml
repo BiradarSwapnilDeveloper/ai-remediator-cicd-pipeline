@@ -1,4 +1,4 @@
-name: PixelCraft AI DevSecOps Pipeline
+name: PixelCraft AI Enterprise DevSecOps
 
 on:
   push:
@@ -9,12 +9,77 @@ on:
     
 
 jobs:
-
-  # JOB 1: Scan karo, AI se fix karwao, aur wapas push karo
   # =========================================================
-  scan-and-fix:
-    name: "🔍 Scan & 🤖 AI Auto-Fix"
+  # JOB 1: Security Gates (Fail if vulnerable)
+  # =========================================================
+  security-gates:
+    name: "🛡️ Security Gates"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "🚀 Notify Pipeline Started"
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage -d chat_id=${TELEGRAM_CHAT_ID} -d text="🚀 Enterprise Pipeline Started: ${{ github.ref_name }}" > /dev/null
+          fi
+
+      # Gate 1: Secret Scanning
+      - name: "🔑 Secret Scanner (TruffleHog)"
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+
+      # Gate 2: Snyk Check (Fails on High vulnerabilities)
+      - name: "🔒 Snyk Security Gate"
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --severity-threshold=high
+      
+      # Gate 3: Trivy Scan (Runs even if Snyk fails, generates report for AI)
+      - name: "🛡️ Trivy Vulnerability Scan"
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy-results.json'
+          exit-code: '1' # Setting to 1 so it also fails the job if vulnerabilities are found
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          scanners: 'vuln'
+
+      - name: "📤 Upload JSON Report for AI"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report-json
+          path: trivy-results.json
+          retention-days: 1
+
+      - name: "🎉 All Security Checks Passed!"
+        run: echo "Code is completely secure. Ready for deployment."
+
+  # =========================================================
+  # JOB 2: AI Auto-Healer (Runs ONLY if Security Gates FAIL)
+  # =========================================================
+  ai-auto-healer:
+    name: "🤖 AI Auto-Healer"
+    runs-on: ubuntu-latest
+    needs: security-gates
+    if: always() && needs.security-gates.result == 'failure'
     permissions:
       contents: write
       pull-requests: write
@@ -25,75 +90,29 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: "📥 Download JSON Report"
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-report-json
 
-      - name: "🚀 Notify Pipeline Started"
+      - name: "🤖 AI Auto-Remediator (Gemini)"
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
-            curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage -d chat_id=${TELEGRAM_CHAT_ID} -d text="🚀 PixelCraft AI Pipeline Started for branch: ${{ github.ref_name }}" > /dev/null
-          fi
+          pip install requests google-genai --quiet
+          python scripts/ai_remediator.py
 
-      # Gate 1: Secret Scanning
-      - name: "🔑 Secret Scanner (TruffleHog)"
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-
-      # Gate 2: Trivy Scan - Generate JSON report for AI
-      - name: "🛡️ Trivy Vulnerability Scan"
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'json'
-          output: 'trivy-results.json'
-          exit-code: '0'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-          scanners: 'vuln'
-
-      # Gate 3: Generate Markdown Report in GitHub Summary
-      - name: "📊 Generate Markdown Report"
-        if: always()
+      - name: "🛠️ AI Auto-Healing Infrastructure (IaC)"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          echo "## 🛡️ Trivy Vulnerability Report" >> $GITHUB_STEP_SUMMARY
-          echo '```text' >> $GITHUB_STEP_SUMMARY
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy fs . --scanners vuln >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "✅ Markdown Report added to Job Summary!"
+          pip install google-genai --quiet
+          python scripts/ai_iac_healer.py
 
-      # Gate 3b: Generate and Upload HTML Report (for downloading)
-      - name: "📄 Generate & Upload HTML Report"
-        if: always()
-        run: |
-          # Downloading html.tpl from the repo gives a 404 (exit code 4).
-          # Using the local html.tpl already present in the workspace.
-          trivy fs . --scanners vuln --format template --template "@html.tpl" -o trivy-report.html
-          echo "✅ HTML Report generated!"
-
-      - name: "📤 Upload HTML Artifact"
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-report-html
-          path: trivy-report.html
-
-
-      # Upload JSON Report (Hidden, used by AI)
-      - name: "📤 Upload JSON Report"
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-report-json
-          path: trivy-results.json
-
-      # ==========================================
-      # 🥷 NEW FEATURE: AI Red Teamer (Option 1)
-      # ==========================================
       - name: "🥷 AI Red Team & Threat Modeling"
-        if: always()
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
@@ -104,86 +123,27 @@ jobs:
             cat ai-red-team-report.md >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: "📤 Upload AI Red Team Report"
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-red-team-report
-          path: ai-red-team-report.md
-          retention-days: 7
-
-      # ==========================================
-      # 🔐 NEW FEATURE: AI Zero-Trust IAM Generator (Option 2)
-      # ==========================================
       - name: "🔐 AI Zero-Trust IAM Generator"
-        if: always()
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           pip install google-genai --quiet
           python scripts/ai_zero_trust_policy.py
-          if [ -f zero-trust-iam-policy.json ]; then
-            echo "## 🔐 AI Generated Zero-Trust IAM Policy" >> $GITHUB_STEP_SUMMARY
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            cat zero-trust-iam-policy.json >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
 
-      - name: "📤 Upload Zero-Trust IAM Policy"
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zero-trust-iam-policy
-          path: zero-trust-iam-policy.json
-          retention-days: 7
-
-      # ==========================================
-      # 🛠️ NEW FEATURE: AI Auto-Healing Infrastructure (Option 3)
-      # ==========================================
-      - name: "🛠️ AI Auto-Healing Infrastructure (IaC)"
-        if: always()
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          pip install google-genai --quiet
-          python scripts/ai_iac_healer.py
-
-      # Gate 4: AI Auto-Remediator
-      - name: "🤖 AI Auto-Remediator (Gemini)"
-        if: always()
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          pip install requests google-genai --quiet
-          python scripts/ai_remediator.py
-
-      - name: "Upload AI Debug Log"
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-debug-log
-          path: ai_debug.log
-          retention-days: 1
-
-      # Gate 5: Open Pull Request with AI Fixes
       - name: "🧹 Cleanup Temp Files Before PR"
-        if: always()
         run: |
-          rm -f trivy-results.json trivy-report.html html.tpl ai_debug.log zero-trust-iam-policy.json ai-red-team-report.md
+          rm -f trivy-results.json ai_debug.log zero-trust-iam-policy.json ai-red-team-report.md
           rm -rf .cache
 
       - name: "🚀 Create Pull Request for AI Fixes"
-        if: always()
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "🤖 Auto-fix: AI patched vulnerabilities & infrastructure"
           title: "🤖 [Security] AI Auto-Healing Patches"
           body: |
-            The **AI DevSecOps Pipeline** detected vulnerabilities and misconfigurations in the codebase.
-            The AI has automatically generated these fixes to restore security compliance.
+            The **Enterprise Security Gates** detected vulnerabilities.
+            The AI Auto-Healer has automatically generated these fixes.
             
             **Changes Included:**
             - Vulnerable NPM packages updated (package.json)
@@ -194,39 +154,12 @@ jobs:
           delete-branch: true
 
   # ============================================================
-  # JOB 2: AI fix ke baad VERIFY karo - yahi green/red karega PR ko
-  # ============================================================
-  verify-after-fix:
-    name: "✅ Verify Clean Scan (for Merge)"
-    runs-on: ubuntu-latest
-    needs: scan-and-fix  # Job 1 complete hone ke baad hi chalega
-
-    steps:
-      - name: Checkout Latest Code (with AI fixes)
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-
-      # Snyk - ab yeh fail karega agar AI ne fix nahi kiya
-      - name: "🔒 Snyk Final Security Gate"
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --severity-threshold=high
-
-      - name: "🎉 All Clear! Safe to Merge."
-        run: echo "All security checks passed! This PR is safe to merge."
-
-  # ============================================================
-  # JOB 3: Manual Deployment (Continuous Delivery)
+  # JOB 3: Deploy to Production (Runs ONLY if Security Gates PASS)
   # ============================================================
   deploy-to-production:
     name: "🚀 Deploy to Production"
     runs-on: ubuntu-latest
-    needs: verify-after-fix  # Only runs if security verification passes
+    needs: security-gates  # Wait for Security Gates to complete. If security-gates fails, this is skipped automatically.
     environment: 
       name: production
       url: https://pixelcraft-ai-94y5.onrender.com/
@@ -237,7 +170,6 @@ jobs:
       - name: "🚢 Deploying Application to Render"
         run: |
           echo "Triggering deployment to Render..."
-          # Here you can add Render Deploy Hook curl command if needed
           sleep 3
           echo "✅ Deployment Successful! App is now LIVE."
 
