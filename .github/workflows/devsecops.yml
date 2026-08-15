@@ -111,6 +111,31 @@ jobs:
           path: ai-red-team-report.md
           retention-days: 7
 
+      # ==========================================
+      # 🔐 NEW FEATURE: AI Zero-Trust IAM Generator (Option 2)
+      # ==========================================
+      - name: "🔐 AI Zero-Trust IAM Generator"
+        if: always()
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          pip install google-genai --quiet
+          python scripts/ai_zero_trust_policy.py
+          if [ -f zero-trust-iam-policy.json ]; then
+            echo "## 🔐 AI Generated Zero-Trust IAM Policy" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat zero-trust-iam-policy.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: "📤 Upload Zero-Trust IAM Policy"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-trust-iam-policy
+          path: zero-trust-iam-policy.json
+          retention-days: 7
+
       # Gate 4: AI Auto-Remediator
       - name: "🤖 AI Auto-Remediator (Gemini)"
         if: always()
