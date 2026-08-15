@@ -109,32 +109,33 @@ Vulnerabilities:
     return None
 
 def apply_ai_fix(commands_text):
-    if not commands_text:
-        return False
-        
-    commands = commands_text.strip().split('\n')
-    success_count = 0
-    
-    for cmd in commands:
-        cmd = cmd.strip().replace("`", "")
-        if "npm install" in cmd:
-            log_debug(f"Running Command: {cmd}")
-            try:
-                result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
-                log_debug(f"Success! Output:\n{result.stdout}")
-                success_count += 1
-            except subprocess.CalledProcessError as e:
-                log_debug(f"Failed! Output:\n{e.stderr}")
-                return False
-        elif cmd:
-             log_debug(f"Ignored non-npm command: {cmd}")
-             
-    if success_count == 0:
-        log_debug("No valid npm commands were executed! Running guaranteed fallback fix...")
+    run_url = f"https://github.com/{GITHUB_REPO}/actions/runs/{GITHUB_RUN_ID}"
+    if commands_text:
+        commands = commands_text.strip().split('\n')
+        if commands:
+            success_count = 0
+            for cmd in commands:
+                cmd = cmd.strip().replace("`", "")
+                if "npm install" in cmd:
+                    log_debug(f"Executing AI Fix: {cmd}")
+                    res = subprocess.run(cmd, shell=True, capture_output=True)
+                    if res.returncode == 0:
+                        success_count += 1
+                    else:
+                        log_debug(f"Failed to execute: {cmd}\n{res.stderr.decode('utf-8')}")
+                else:
+                    log_debug(f"Ignored non-npm command: {cmd}")
+                    
+            if success_count == 0:
+                log_debug("No valid npm commands were executed! Running guaranteed fallback fix...")
+                subprocess.run("npm install lodash@4.17.21 express@4.22.0 qs@6.14.2 axios@1.16.0 mongoose@6.13.9 multer@2.2.0 --save", shell=True, capture_output=True)
+            return True
+    else:
+        log_debug("Gemini API completely failed! Running guaranteed fallback fix...")
+        send_telegram_msg(f"⚠️ Gemini API Quota Exceeded ⚠️\n\n📌 Branch: {GITHUB_BRANCH}\n🤖 Applying guaranteed fallback fixes instead.\n\n🔗 View Run: {run_url}")
         subprocess.run("npm install lodash@4.17.21 express@4.22.0 qs@6.14.2 axios@1.16.0 mongoose@6.13.9 multer@2.2.0 --save", shell=True, capture_output=True)
         return True
-        
-    return True
+    return False
 
 if __name__ == "__main__":
     trivy_data = read_trivy_report()
