@@ -88,6 +88,29 @@ jobs:
           name: trivy-report-json
           path: trivy-results.json
 
+      # ==========================================
+      # 🥷 NEW FEATURE: AI Red Teamer (Option 1)
+      # ==========================================
+      - name: "🥷 AI Red Team & Threat Modeling"
+        if: always()
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          pip install google-genai --quiet
+          python scripts/ai_red_teamer.py
+          if [ -f ai-red-team-report.md ]; then
+            echo "## 🥷 AI Red Team & Threat Modeling Report" >> $GITHUB_STEP_SUMMARY
+            cat ai-red-team-report.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: "📤 Upload AI Red Team Report"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-red-team-report
+          path: ai-red-team-report.md
+          retention-days: 7
+
       # Gate 4: AI Auto-Remediator
       - name: "🤖 AI Auto-Remediator (Gemini)"
         if: always()
