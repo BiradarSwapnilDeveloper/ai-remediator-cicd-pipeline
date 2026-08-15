@@ -138,38 +138,13 @@ jobs:
           pip install google-genai --quiet
           python scripts/ai_zero_trust_policy.py
 
-      - name: "🧹 Cleanup Temp Files Before PR"
+      - name: "🚀 Push AI Fixes to Main"
         run: |
-          rm -f trivy-results.json ai_debug.log
-          rm -rf .cache
-
-      - name: "🔍 Debug: Check Git Status"
-        run: |
-          git status
-          git diff
-
-      - name: "🔥 FORCE FILE CHANGE (Demo Guarantee)"
-        run: |
-          echo "" >> package.json
-          echo "<!-- AI Auto-Healing PR Trigger -->" >> README.md
-
-      - name: "🚀 Create Pull Request for AI Fixes"
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "🤖 Auto-fix: AI patched vulnerabilities & infrastructure"
-          title: "🤖 [Security] AI Auto-Healing Patches"
-          body: |
-            The **Enterprise Security Gates** detected vulnerabilities.
-            The AI Auto-Healer has automatically generated these fixes.
-            
-            **Changes Included:**
-            - Vulnerable NPM packages updated (package.json)
-            - Infrastructure as Code (Dockerfile) auto-healed for security
-            
-            Please review the changes and merge this Pull Request.
-          branch: "ai-auto-fixes"
-          delete-branch: true
+          git config --global user.name "AI Auto-Healer Bot"
+          git config --global user.email "bot@pixelcraft.com"
+          git add package.json package-lock.json Dockerfile || true
+          git commit -m "🤖 Auto-fix: AI patched vulnerabilities & infrastructure" || echo "No changes to commit"
+          git push origin main || echo "Push failed or nothing to push"
 
   # ============================================================
   # JOB 3: Deploy to Production (Runs ONLY if Security Gates PASS)
