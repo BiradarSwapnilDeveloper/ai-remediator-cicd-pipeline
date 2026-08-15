@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout Code
@@ -166,35 +167,30 @@ jobs:
           path: ai_debug.log
           retention-days: 1
 
-      # Gate 5: Push auto-remediation back to the branch
-      - name: "🚀 Push AI Fixes to Branch"
+      # Gate 5: Open Pull Request with AI Fixes
+      - name: "🧹 Cleanup Temp Files Before PR"
         if: always()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Cleanup temp files
-          rm -f trivy-results.json trivy-report.html html.tpl
-          
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json Dockerfile || true
-          
-          # Check if any staged changes exist (e.g. package.json/package-lock.json/Dockerfile modified)
-          if ! git diff --staged --quiet; then
-            git commit -m "🤖 Auto-fix: AI patched vulnerabilities & infrastructure [skip ci]"
-            BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          rm -f trivy-results.json trivy-report.html html.tpl ai_debug.log zero-trust-iam-policy.json ai-red-team-report.md
+
+      - name: "🚀 Create Pull Request for AI Fixes"
+        if: always()
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "🤖 Auto-fix: AI patched vulnerabilities & infrastructure"
+          title: "🤖 [Security] AI Auto-Healing Patches"
+          body: |
+            The **AI DevSecOps Pipeline** detected vulnerabilities and misconfigurations in the codebase.
+            The AI has automatically generated these fixes to restore security compliance.
             
-            # Pull with rebase to avoid rejected pushes if the remote advanced
-            git pull --rebase origin $BRANCH_NAME || true
+            **Changes Included:**
+            - Vulnerable NPM packages updated (package.json)
+            - Infrastructure as Code (Dockerfile) auto-healed for security
             
-            git push origin HEAD:$BRANCH_NAME
-            echo "✅ AI fixes pushed to branch: $BRANCH_NAME"
-            if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
-              curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage -d chat_id=${TELEGRAM_CHAT_ID} -d text="✅ AI fixes successfully pushed back to GitHub ($BRANCH_NAME)!" > /dev/null
-            fi
-          else
-            echo "ℹ️ No changes needed. Already clean!"
-          fi
+            Please review the changes and merge this Pull Request.
+          branch: "ai-auto-fixes"
+          delete-branch: true
 
   # ============================================================
   # JOB 2: AI fix ke baad VERIFY karo - yahi green/red karega PR ko
