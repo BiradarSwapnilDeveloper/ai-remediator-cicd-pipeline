@@ -106,6 +106,7 @@ jobs:
         run: |
           pip install requests google-genai --quiet
           python scripts/ai_remediator.py
+          sleep 15
 
       - name: "🛠️ AI Auto-Healing Infrastructure (IaC)"
         continue-on-error: true
@@ -114,6 +115,7 @@ jobs:
         run: |
           pip install google-genai --quiet
           python scripts/ai_iac_healer.py
+          sleep 15
 
       - name: "🥷 AI Red Team & Threat Modeling"
         continue-on-error: true
@@ -126,6 +128,7 @@ jobs:
             echo "## 🥷 AI Red Team & Threat Modeling Report" >> $GITHUB_STEP_SUMMARY
             cat ai-red-team-report.md >> $GITHUB_STEP_SUMMARY
           fi
+          sleep 15
 
       - name: "🔐 AI Zero-Trust IAM Generator"
         continue-on-error: true
