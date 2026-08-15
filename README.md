@@ -5,7 +5,7 @@
 [![AI Remediator](https://img.shields.io/badge/AI_Engine-Gemini_1.5_Flash-8E24AA?style=for-the-badge&logo=google&logoColor=white)](https://generativelanguage.googleapis.com/)
 [![License](https://img.shields.io/badge/License-MIT-43A047?style=for-the-badge)](LICENSE)
 
-**PixelCraft AI** is an enterprise-grade web application offering a comprehensive suite of AI-powered image editing tools. Engineered with a **Security-First Architecture**, the repository is continuously audited and auto-patched using a custom GenAI-driven DevSecOps pipeline.
+ It is an enterprise-grade web application offering a comprehensive suite of AI-powered image editing tools. Engineered with a **Security-First Architecture**, the repository is continuously audited and auto-patched using a custom GenAI-driven DevSecOps pipeline.
 
 ---
 
@@ -13,7 +13,7 @@
 
 ![PixelCraft AI DevSecOps Pipeline Architecture](https://raw.githubusercontent.com/vaseflamingoseguru205-debug/PixelCraft_AI/main/architecture.jpg)
 
-While PixelCraft AI delivers frontend capabilities, its core engineering foundation relies on an automated, multi-gate CI/CD infrastructure leveraging **GitHub Actions**, enterprise security scanners, and **GenAI-powered auto-remediation**.
+AI delivers frontend capabilities, its core engineering foundation relies on an automated, multi-gate CI/CD infrastructure leveraging **GitHub Actions**, enterprise security scanners, and **GenAI-powered auto-remediation**.
 
 The pipeline enforces zero hardcoded secrets, zero unpatched vulnerability dependencies across all severities (Critical, High, Medium, Low), and strict compliance checks prior to deployment.
 
