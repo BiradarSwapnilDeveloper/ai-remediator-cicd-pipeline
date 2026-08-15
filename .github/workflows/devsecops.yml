@@ -95,8 +95,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: trivy-report-json
+          path: .
 
       - name: "🤖 AI Auto-Remediator (Gemini)"
+        continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -106,6 +108,7 @@ jobs:
           python scripts/ai_remediator.py
 
       - name: "🛠️ AI Auto-Healing Infrastructure (IaC)"
+        continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
@@ -113,6 +116,7 @@ jobs:
           python scripts/ai_iac_healer.py
 
       - name: "🥷 AI Red Team & Threat Modeling"
+        continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
@@ -124,6 +128,7 @@ jobs:
           fi
 
       - name: "🔐 AI Zero-Trust IAM Generator"
+        continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
