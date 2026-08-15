@@ -143,6 +143,16 @@ jobs:
           rm -f trivy-results.json ai_debug.log
           rm -rf .cache
 
+      - name: "🔍 Debug: Check Git Status"
+        run: |
+          git status
+          git diff
+
+      - name: "🔥 FORCE FILE CHANGE (Demo Guarantee)"
+        run: |
+          echo "" >> package.json
+          echo "<!-- AI Auto-Healing PR Trigger -->" >> README.md
+
       - name: "🚀 Create Pull Request for AI Fixes"
         uses: peter-evans/create-pull-request@v6
         with:
