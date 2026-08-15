@@ -1,27 +1,21 @@
-FROM node:20.12.2-alpine3.19 AS build
-
-RUN mkdir -p /usr/src/app && chown -R node:node /usr/src/app
+FROM node:20.18.1-alpine3.20 AS build
 
 WORKDIR /usr/src/app
 
-USER node
-
-COPY --chown=node:node package*.json ./
+COPY package*.json ./
 
 RUN npm ci --omit=dev && npm cache clean --force
 
-FROM node:20.12.2-alpine3.19
+FROM node:20.18.1-alpine3.20
 
 RUN apk update && apk upgrade && apk add --no-cache tini
-
-RUN mkdir -p /usr/src/app && chown -R node:node /usr/src/app
 
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 
-COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node . .
+COPY --from=build /usr/src/app/node_modules ./node_modules
+COPY . .
 
 USER node
 
