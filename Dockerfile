@@ -1,17 +1,17 @@
-# DELIBERATELY INSECURE DOCKERFILE FOR AI HEALING TEST
-FROM node:latest
+FROM node:20-alpine
 
-# Running as root is a huge security risk
-USER root
+ENV NODE_ENV=production
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-COPY package*.json ./
-RUN npm install
+COPY --chown=node:node package*.json ./
 
-COPY . .
+RUN npm ci --only=production && npm cache clean --force
 
-# Exposing a privileged or risky port
-EXPOSE 80
+COPY --chown=node:node . .
+
+USER node
+
+EXPOSE 3000
 
 CMD ["npm", "start"]
