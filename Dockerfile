@@ -12,12 +12,14 @@ RUN apk update && apk upgrade && apk add --no-cache tini
 
 WORKDIR /usr/src/app
 
-ENV NODE_ENV=production
-
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY . .
+RUN chown node:node /usr/src/app
 
 USER node
+
+ENV NODE_ENV=production
+
+COPY --chown=node:node . .
+COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 
 EXPOSE 3000
 
