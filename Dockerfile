@@ -5,7 +5,7 @@ WORKDIR /home/node/app
 
 COPY --chown=node:node package*.json ./
 
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 FROM node:20.18.1-alpine3.20
 
@@ -18,8 +18,8 @@ WORKDIR /home/node/app
 
 ENV NODE_ENV=production
 
-COPY --chown=node:node . .
-COPY --chown=node:node --from=build /home/node/app/node_modules ./node_modules
+COPY --chown=1000:1000 --from=build /home/node/app/node_modules ./node_modules
+COPY --chown=1000:1000 . .
 
 USER 1000:1000
 
