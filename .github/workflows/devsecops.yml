@@ -83,6 +83,39 @@ jobs:
           name: trivy-report-json
           path: trivy-results.json
 
+  # ============================================================
+  # JOB 2: Snyk Scan aur AI Remediation
+  # ============================================================
+  scan-and-remediate:
+    name: "🔒 Snyk Scan & 🤖 AI Fix"
+    runs-on: ubuntu-latest
+    needs: security-scans
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: "🔒 Snyk Security Scan (Pre-Fix)"
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --severity-threshold=high
+
+      - name: "📥 Download JSON Report for AI"
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-report-json
+          path: .
+
       # ==========================================
       # 🥷 NEW FEATURE: AI Red Teamer (Option 1)
       # ==========================================
@@ -142,39 +175,6 @@ jobs:
           pip install google-genai --quiet
           python scripts/ai_iac_healer.py
 
-
-  # ============================================================
-  # JOB 2: Snyk Scan aur AI Remediation
-  # ============================================================
-  scan-and-remediate:
-    name: "🔒 Snyk Scan & 🤖 AI Fix"
-    runs-on: ubuntu-latest
-    needs: security-scans
-    permissions:
-      contents: write
-      pull-requests: write
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref_name }}
-
-      - name: "🔒 Snyk Security Scan (Pre-Fix)"
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --severity-threshold=high
-
-      - name: "📥 Download JSON Report for AI"
-        uses: actions/download-artifact@v4
-        with:
-          name: trivy-report-json
-          path: .
 
       - name: "🤖 AI Auto-Remediator (Gemini)"
         if: always()
