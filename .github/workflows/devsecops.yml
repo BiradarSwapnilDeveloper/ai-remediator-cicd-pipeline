@@ -11,14 +11,11 @@ on:
 jobs:
 
   # =========================================================
-  # JOB 1: Scan karo, AI se fix karwao, aur wapas push karo
+  # JOB 1: Initial Scans & AI Reporting
   # =========================================================
-  scan-and-fix:
-    name: "🔍 Scan & 🤖 AI Auto-Fix"
+  security-scans:
+    name: "🔍 Scans & AI Reports"
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout Code
@@ -145,7 +142,40 @@ jobs:
           pip install google-genai --quiet
           python scripts/ai_iac_healer.py
 
-      # Gate 4: AI Auto-Remediator
+
+  # ============================================================
+  # JOB 2: Snyk Scan aur AI Remediation
+  # ============================================================
+  scan-and-remediate:
+    name: "🔒 Snyk Scan & 🤖 AI Fix"
+    runs-on: ubuntu-latest
+    needs: security-scans
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: "🔒 Snyk Security Scan (Pre-Fix)"
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --severity-threshold=high
+
+      - name: "📥 Download JSON Report for AI"
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-report-json
+          path: .
+
       - name: "🤖 AI Auto-Remediator (Gemini)"
         if: always()
         env:
@@ -164,24 +194,25 @@ jobs:
           path: ai_debug.log
           retention-days: 1
 
-      # Gate 5: Push Directly to Main
-      - name: "🚀 Push Fixes to Main"
+      - name: "🚀 Push Fixes to Branch"
         if: always()
         run: |
           git config --global user.name "AI Auto-Healer Bot"
           git config --global user.email "bot@pixelcraft.com"
           git add package.json package-lock.json Dockerfile || true
           git commit -m "🤖 Auto-fix: AI patched vulnerabilities & infrastructure" || echo "No changes to commit"
-          git pull --rebase origin main || true
-          git push origin main || echo "Nothing to push or push failed"
+          BRANCH_NAME=${{ github.head_ref || github.ref_name }}
+          git pull --rebase origin $BRANCH_NAME || true
+          git push origin HEAD:$BRANCH_NAME || echo "Nothing to push or push failed"
+
 
   # ============================================================
-  # JOB 2: AI fix ke baad VERIFY karo
+  # JOB 3: AI fix ke baad VERIFY karo
   # ============================================================
   verify-after-fix:
     name: "✅ Verify Clean Scan (for Merge)"
     runs-on: ubuntu-latest
-    needs: scan-and-fix
+    needs: scan-and-remediate
 
     steps:
       - name: Checkout Latest Code (with AI fixes)
@@ -190,7 +221,6 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
-      # Snyk - ab yeh fail karega agar AI ne fix nahi kiya
       - name: "🔒 Snyk Final Security Gate"
         uses: snyk/actions/node@master
         env:
@@ -202,8 +232,9 @@ jobs:
       - name: "🎉 All Clear! Safe to Deploy."
         run: echo "All security checks passed!"
 
+
   # ============================================================
-  # JOB 3: Manual Deployment (Continuous Delivery)
+  # JOB 4: Manual Deployment (Continuous Delivery)
   # ============================================================
   deploy-to-production:
     name: "🚀 Deploy to Production"
