@@ -209,13 +209,10 @@ jobs:
     name: "🚀 Deploy to Production"
     runs-on: ubuntu-latest
     needs: verify-after-fix
-    environment: 
+    environment:
       name: production
       url: https://pixelcraft-ai-94y5.onrender.com/
     steps:
-      - name: "⏳ Awaiting Manual Approval..."
-        run: echo "Manual approval received! Starting deployment..."
-
       - name: "🚢 Deploying Application to Render"
         run: |
           echo "Triggering deployment to Render..."
