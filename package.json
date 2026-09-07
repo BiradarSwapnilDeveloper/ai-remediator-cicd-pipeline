@@ -30,10 +30,10 @@
     "lodash": "^4.18.1",
     "moment": "^2.24.0",
     "mongoose": "^6.13.9",
-    "multer": "^2.2.0",
+    "multer": "^2.3.0",
     "nodemailer": "^9.0.1",
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
-    "qs": "^6.14.2"
+    "qs": "^6.14.1"
   }
 }
