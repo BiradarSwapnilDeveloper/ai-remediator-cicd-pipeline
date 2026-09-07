@@ -134,7 +134,6 @@ PixelCraft_AI/
 1. **Trigger Event:** A developer pushes code or submits a Pull Request.
 2. **Security Audit:** TruffleHog checks for leaked keys; Trivy scans root and subfolder lockfiles across all severities.
 3. **AI Remediation:** If vulnerabilities are found, `ai_remediator.py` requests precise update commands from Gemini 1.5 Flash, runs them locally on the runner, and commits only the modified `package.json` files.
-# Auto AI-Remediator Secured with Advanced Self-Healing DevSecOps CI/CD Pipeline
 
 
 
