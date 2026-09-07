@@ -16,11 +16,8 @@ RUN apk update && apk upgrade --no-cache && \
 
 WORKDIR /usr/src/app
 
-COPY --from=build /usr/src/app/node_modules ./node_modules
-COPY . .
-
-RUN chown -R root:root /usr/src/app && \
-    chmod -R 755 /usr/src/app
+COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node . .
 
 USER node
 
