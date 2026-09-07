@@ -38,32 +38,29 @@ def send_telegram_msg(msg):
     except Exception as e:
         log_debug(f"❌ Failed to send Telegram message: {e}")
 
-def read_trivy_report():
+def read_snyk_report():
     try:
-        with open('trivy-results.json', 'r', encoding='utf-8', errors='ignore') as file:
-            content = file.read()
-            if '\x00' in content:
-                with open('trivy-results.json', 'r', encoding='utf-16le', errors='ignore') as f2:
-                    content = f2.read()
-            return json.loads(content)
+        with open('snyk-results.json', 'r', encoding='utf-8', errors='ignore') as file:
+            return json.loads(file.read())
     except Exception as e:
-        log_debug(f"Error reading Trivy report: {e}")
+        log_debug(f"Error reading Snyk report: {e}")
         return None
 
 def extract_vulnerabilities(report):
     vuln_summary = []
-    if "Results" in report:
-        for result in report["Results"]:
-            target = result.get("Target", "package-lock.json")
-            if "Vulnerabilities" in result:
-                for vuln in result["Vulnerabilities"]:
-                    pkg = vuln.get("PkgName", "unknown")
-                    installed = vuln.get("InstalledVersion", "unknown")
-                    fixed = vuln.get("FixedVersion", "unknown")
-                    severity = vuln.get("Severity", "unknown")
-                    
-                    if fixed != "unknown" and fixed != "":
-                        vuln_summary.append(f"Target File: {target}, Package: {pkg}, Installed: {installed}, Fixed in: {fixed}, Severity: {severity}")
+    reports = [report] if isinstance(report, dict) else report if isinstance(report, list) else []
+        
+    for r in reports:
+        if "vulnerabilities" in r:
+            for vuln in r["vulnerabilities"]:
+                pkg = vuln.get("name", "unknown")
+                installed = vuln.get("version", "unknown")
+                fixed_in_list = vuln.get("fixedIn", [])
+                fixed = fixed_in_list[0] if fixed_in_list else "unknown"
+                severity = vuln.get("severity", "unknown")
+                
+                if fixed != "unknown" and fixed != "":
+                    vuln_summary.append(f"Target File: package.json, Package: {pkg}, Installed: {installed}, Fixed in: {fixed}, Severity: {severity}")
     return "\n".join(set(vuln_summary))
 
 def ask_gemini_for_fix(vuln_details):
@@ -127,24 +124,20 @@ def apply_ai_fix(commands_text):
                     log_debug(f"Ignored non-npm command: {cmd}")
                     
             if success_count == 0:
-                log_debug("No valid npm commands were executed! Running guaranteed fallback fix...")
-            
-            # GUARANTEE SNYK PASS FOR DEMO: Always run this to ensure perfect versions even if AI hallucinated wrong ones
-            subprocess.run("npm install lodash@4.18.1 express@4.22.0 qs@6.14.2 axios@1.19.0 mongoose@6.13.9 multer@2.2.0 body-parser@1.20.3 --save", shell=True, capture_output=True)
+                log_debug("No valid npm commands were executed!")
             return True
     else:
-        log_debug("Gemini API completely failed! Running guaranteed fallback fix...")
-        send_telegram_msg(f"⚠️ Gemini API Quota Exceeded ⚠️\n\n📌 Branch: {GITHUB_BRANCH}\n🤖 Applying guaranteed fallback fixes instead.\n\n🔗 View Run: {run_url}")
-        subprocess.run("npm install lodash@4.18.1 express@4.22.0 qs@6.14.2 axios@1.19.0 mongoose@6.13.9 multer@2.2.0 body-parser@1.20.3 --save", shell=True, capture_output=True)
+        log_debug("Gemini API completely failed!")
+        send_telegram_msg(f"⚠️ Gemini API Quota Exceeded ⚠️\n\n📌 Branch: {GITHUB_BRANCH}\n🤖 View Run: {run_url}")
         return True
     return False
 
 if __name__ == "__main__":
-    trivy_data = read_trivy_report()
+    snyk_data = read_snyk_report()
     run_url = f"https://github.com/{GITHUB_REPO}/actions/runs/{GITHUB_RUN_ID}"
     
-    if trivy_data:
-        vuln_details = extract_vulnerabilities(trivy_data)
+    if snyk_data:
+        vuln_details = extract_vulnerabilities(snyk_data)
         
         # Scenario 1: No fixable vulnerabilities
         if not vuln_details:
@@ -164,8 +157,6 @@ if __name__ == "__main__":
                 fix_msg = f"🛠️ Gemini AI Fix Applied 🛠️\n\n📌 Branch: {GITHUB_BRANCH}\n🤖 Action: The AI has successfully executed npm commands to patch the vulnerabilities!\n\n📋 Executed Fixes:\n{ai_solution[:800]}\n\n🔗 Next step: Pushing changes back to GitHub...\nView Run: {run_url}"
                 send_telegram_msg(fix_msg)
             else:
-                send_telegram_msg(f"⚠️ Gemini AI Output Invalid ⚠️\n\n📌 Branch: {GITHUB_BRANCH}\n🤖 Applying guaranteed fallback fixes instead.\n\n🔗 View Run: {run_url}")
-                subprocess.run("npm install lodash@4.17.21 express@4.22.0 qs@6.14.2 axios@1.16.0 mongoose@6.13.9 multer@2.2.0 --save", shell=True, capture_output=True)
+                send_telegram_msg(f"⚠️ Gemini AI Output Invalid ⚠️\n\n📌 Branch: {GITHUB_BRANCH}\n🔗 View Run: {run_url}")
         else:
-            send_telegram_msg(f"⚠️ Gemini API Quota Exceeded ⚠️\n\n📌 Branch: {GITHUB_BRANCH}\n🤖 Applying guaranteed fallback fixes instead.\n\n🔗 View Run: {run_url}")
-            subprocess.run("npm install lodash@4.17.21 express@4.22.0 qs@6.14.2 axios@1.16.0 mongoose@6.13.9 multer@2.2.0 --save", shell=True, capture_output=True)
+            send_telegram_msg(f"⚠️ Gemini API Quota Exceeded ⚠️\n\n📌 Branch: {GITHUB_BRANCH}\n🔗 View Run: {run_url}")
