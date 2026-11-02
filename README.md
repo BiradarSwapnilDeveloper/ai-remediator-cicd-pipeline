@@ -1,142 +1,111 @@
-# Auto AI-Remediator Secured with Advanced Self-Healing DevSecOps CI/CD Pipeline
+# AI Remediator DevSecOps CI/CD Pipeline
 
 [![DevSecOps Pipeline](https://img.shields.io/badge/CI%2FCD-DevSecOps-0052CC?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/)
 [![Security Scan](https://img.shields.io/badge/Security-Trivy%20%7C%20TruffleHog%20%7C%20Snyk-1E88E5?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/)
-[![AI Remediator](https://img.shields.io/badge/AI_Engine-Gemini_1.5_Flash-8E24AA?style=for-the-badge&logo=google&logoColor=white)](https://generativelanguage.googleapis.com/)
+[![AI Engine](https://img.shields.io/badge/AI-Gemini-8E24AA?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/License-MIT-43A047?style=for-the-badge)](LICENSE)
 
- It is an enterprise-grade web application offering a comprehensive suite of AI-powered image editing tools. Engineered with a **Security-First Architecture**, the repository is continuously audited and auto-patched using a custom GenAI-driven DevSecOps pipeline.
+This repository contains an AI-powered application and a GitHub Actions DevSecOps pipeline. The workflow scans for exposed secrets and vulnerable dependencies, generates security reports, runs AI-assisted security analysis and remediation, verifies fixes, and gates the production job behind manual approvals.
 
----
+## Pipeline overview
 
-## DevSecOps Pipeline Architecture
-
-![PixelCraft AI DevSecOps Pipeline Architecture](https://raw.githubusercontent.com/vaseflamingoseguru205-debug/PixelCraft_AI/main/architecture.jpg)
-
-AI delivers frontend capabilities, its core engineering foundation relies on an automated, multi-gate CI/CD infrastructure leveraging **GitHub Actions**, enterprise security scanners, and **GenAI-powered auto-remediation**.
-
-The pipeline enforces zero hardcoded secrets, zero unpatched vulnerability dependencies across all severities (Critical, High, Medium, Low), and strict compliance checks prior to deployment.
-
----
-
-## DevSecOps Integration Mind Map
+The workflow is defined in `.github/workflows/devsecops.yml`.
 
 ```mermaid
-mindmap
-  root((DevSecOps Pipeline))
-    Continuous Integration
-      GitHub Actions
-      Automated Workflows
-    Security Scanning
-      TruffleHog Secrets
-      Trivy Vulnerability Scanner
-      Snyk SCA Analysis
-    AI Auto Remediation
-      Gemini 1.5 Flash
-      JSON Report Parsing
-      Automated Git Commits
-    Alerting & Telemetry
-      Telegram Bot Notifications
-      WhatsApp Alerts
+flowchart TD
+    A[Push, pull request, or manual dispatch] --> B[TruffleHog secret scan]
+    B --> C[Trivy filesystem vulnerability scan]
+    C --> D[Trivy JSON, HTML, and job summary reports]
+    D --> E[Snyk pre-fix scan]
+    E --> F[AI Red Team report]
+    F --> G[Zero-Trust IAM policy generation]
+    G --> H[Dockerfile auto-healing]
+    H --> I[Gemini dependency remediation]
+    I --> J[Commit and push root package or Dockerfile fixes to branch]
+    J --> K[Snyk final verification]
+    K --> L[Two-person deployment approval]
+    L --> M[Deployment placeholder and production URL health check]
 ```
 
----
+The workflow runs on pushes and pull requests to all branches, and can also be started with `workflow_dispatch`. Because the deployment job has no branch condition, it can run after successful verification on any branch, subject to its approval requirements.
 
-## CI/CD Architecture Flow
+## Workflow jobs
 
-Below is the architectural representation of our automated CI/CD and security remediation workflow:
+### 1. Security scans and Trivy reports
 
-```mermaid
-graph TD
-    A[Developer Push / PR] -->|Trigger| B(GitHub Actions Workflow)
-    B --> C[Step 1: Code Checkout]
-    C --> D{Gate 1: TruffleHog Secret Scan}
-    D -->|Secrets Found| E[Pipeline FAILED]
-    D -->|Passed| F{Gate 2: Trivy Multi-Severity Scan}
-    F -->|Vulns Found| G[Generate JSON & HTML Security Reports]
-    F -->|Passed| H[Pass to Snyk Verification]
-    
-    G --> I[Send Real-Time Telegram & WhatsApp Alerts]
-    G --> J[Gemini 1.5 Flash AI Auto-Remediator]
-    J --> K[Parse Root & Subfolder Targets]
-    K --> L[Generate Exact Patch/Upgrade Commands]
-    L --> M[Execute Subprocess npm Updates]
-    M --> N[Staged Git Diff Guard Check]
-    N -->|Staged Changes Exist| O[Auto Commit & Push Fixes to Branch]
-    N -->|No Changes Needed| P[Skip Commit Cleanly]
-    O --> Q{Gate 3: Snyk Final Verification}
-    Q -->|All Clear| R[Deployment Ready / Safe to Merge]
-```
+- **TruffleHog** scans the checked-out repository for secrets.
+- **Trivy** scans the filesystem for vulnerabilities at `CRITICAL`, `HIGH`, `MEDIUM`, and `LOW` severity. The scan writes `trivy-results.json` and is configured not to fail the job based on findings.
+- A Trivy report is added to the GitHub Actions job summary, and HTML and JSON reports are uploaded as artifacts.
+- The workflow sends a pipeline-start notification to Telegram when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are configured. It trims line endings and an optional `bot` token prefix.
 
----
+### 2. Snyk scan and AI remediation
 
-## Security Gates Breakdown
+- Snyk runs a pre-fix scan with a high-severity threshold and writes `snyk-results.json`. This initial scan is allowed to continue when it reports vulnerabilities.
+- Three Gemini-powered scripts run as part of this job:
+  - `scripts/ai_red_teamer.py` analyzes project source and generates `ai-red-team-report.md`.
+  - `scripts/ai_zero_trust_policy.py` infers cloud service needs from `package.json` and generates `zero-trust-iam-policy.json`.
+  - `scripts/ai_iac_healer.py` analyzes and may rewrite the repository `Dockerfile`.
+- `scripts/ai_remediator.py` reads `snyk-results.json`, asks Gemini for package update commands for fixable findings, and executes returned `npm install` commands. It sends Telegram status messages when Telegram credentials are configured.
+- The workflow stages the root `package.json`, `package-lock.json`, and `Dockerfile`, commits any resulting changes, and attempts to push them to the triggering branch. It does not stage nested package manifests.
 
-Our CI/CD pipeline orchestrates the following security gates synchronously upon every `push` and `pull_request` to the `main` or `feature/*` branches:
+### 3. Final verification
 
-### 1. Pre-commit & Secret Scanning (TruffleHog)
-* **Engine:** `trufflesecurity/trufflehog`
-* **Objective:** Prevents API keys, private keys, passwords, and sensitive tokens from being leaked into repository history.
-* **Mechanism:** Performs entropy-based scanning across the entire repository snapshot. Any detected secret immediately halts the pipeline (Fail-Fast methodology).
+The workflow checks out the latest triggering branch and runs Snyk again with a high-severity threshold. This final scan must pass before the production job can proceed.
 
-### 2. Software Composition Analysis - SCA (Trivy & Snyk)
-* **Engines:** `aquasecurity/trivy-action` & `snyk/actions/node`
-* **Coverage:** All severity levels (**CRITICAL, HIGH, MEDIUM, LOW**) across both root and nested subfolder manifests (e.g., `package-lock.json`, `scratch_imgly/package-lock.json`).
-* **Mechanism:** Scans open-source dependency trees for known CVEs and prototype pollution vectors (resolving GitHub Dependabot security alerts automatically).
+### 4. Production approval and health check
 
-### 3. AI-Powered Auto-Remediation & Self-Healing Engine (Gemini 1.5 Flash)
-* **Engine Script:** `scripts/ai_remediator.py`
-* **Secret Token:** `GEMINI_API_KEY` (Stored in GitHub Repository Secrets)
-* **Objective:** Automatically resolves code & package failures without human developer intervention.
-* **Failure Resolution Mechanism:**
-  1. **Failure Interception:** When Trivy detects CVEs in `trivy-results.json`, the pipeline triggers `scripts/ai_remediator.py`.
-  2. **Trivy JSON Parsing:** The script parses `trivy-results.json`, extracting Target Files (e.g. `package-lock.json` or `scratch_imgly/package-lock.json`), Package Names, Installed Versions, and Fixed Versions.
-  3. **Gemini API Key Authentication:** Reads `GEMINI_API_KEY` from environment variables and constructs an authenticated HTTPS payload to `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`.
-  4. **Subfolder-Aware Prompt Engineering:** Gemini 1.5 Flash evaluates the target paths. If a vulnerability resides in a subfolder (e.g., `scratch_imgly/`), Gemini outputs scoped directory commands: `cd scratch_imgly && npm install package@version --save --legacy-peer-deps && cd ..`.
-  5. **Subprocess Auto-Patching:** Python's `subprocess.run()` executes the AI-generated commands in real-time on the `ubuntu-latest` runner.
-  6. **Staged Git Diff Guard:** Executes `git diff --staged --quiet` after staging `package.json`. If untracked ~1.1GB Trivy database caches exist, they are filtered out, ensuring clean, isolated commits.
+The deployment job uses the `production` GitHub Environment and also runs `trstringer/manual-approval@v1`. The action requests at least two approvals from:
 
-### 4. Automated HTML & Markdown Security Reports
-* **HTML Artifacts:** Generates structured `trivy-report.html` files uploaded as GitHub Actions artifacts (`trivy-report-html`), allowing developers to download visual audit reports directly.
-* **GitHub Step Summaries:** Dynamically renders formatted vulnerability tables in the workflow run summary for instant visibility.
+- `BiradarSwapnilDeveloper`
+- `vaseflamingoseguru205-debug`
 
-### 5. Multi-Channel Real-time Telemetry (Telegram & WhatsApp)
-* **Integration:** Integrated via Telegram Bot API (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) & CallMeBot API.
-* **Telemetry Mechanism:** 
-  1. Executes a dedicated Python telemetry script inside `devsecops.yml`.
-  2. Sanitizes `TELEGRAM_BOT_TOKEN` automatically (stripping `bot` prefixes or trailing whitespace).
-  3. Sends plain-text formatted payloads directly to Telegram, eliminating entity parsing 400 errors while maintaining clickable GitHub Actions run links.
-  4. Triggers instant mobile push alerts with execution status upon every pipeline trigger.
+Repository environment protection rules, including any configured reviewers or wait timer, are managed separately in GitHub Settings.
 
----
+**Deployment limitation:** The workflow's "Deploying Application to Render" step currently prints status messages and sleeps for three seconds; it does not call a Render deploy hook or API. The following step checks `https://pixelcraft-ai-94y5.onrender.com/` and reports the HTTP status, but a failed status does not fail the job. Configure a real Render deployment trigger and stricter health-check behavior if the workflow should deploy and enforce production health.
 
-## Directory Structure
+## GitHub Actions secrets
+
+Configure these under the repository's **Settings → Secrets and variables → Actions**:
+
+| Secret | Used for |
+| --- | --- |
+| `GEMINI_API_KEY` | Red Team, Zero-Trust IAM, Dockerfile healing, and dependency remediation |
+| `SNYK_TOKEN` | Snyk pre-fix and final verification scans |
+| `TELEGRAM_BOT_TOKEN` | Optional Telegram pipeline and remediation notifications |
+| `TELEGRAM_CHAT_ID` | Optional Telegram destination |
+
+The workflow uses `GITHUB_TOKEN` for repository operations and for the manual approval action. The remediation job requests `contents: write` and `pull-requests: write`; the deployment job requests `issues: write`.
+
+## Workflow artifacts
+
+| Artifact | Contents | Retention |
+| --- | --- | --- |
+| `trivy-report-html` | Downloadable Trivy HTML report | GitHub default |
+| `trivy-report-json` | Trivy JSON scan output | GitHub default |
+| `ai-red-team-report` | AI Red Team and threat-modeling report | 7 days |
+| `zero-trust-iam-policy` | Generated IAM policy JSON | 7 days |
+| `ai-debug-log` | AI remediator debug log | 1 day |
+
+Trivy also writes a report to the GitHub Actions job summary. The Snyk JSON file is consumed by the remediation script in its job and is not uploaded as an artifact.
+
+## Repository structure
 
 ```text
-PixelCraft_AI/
+.
 ├── .github/
 │   └── workflows/
-│       └── devsecops.yml       # Complete GitHub Actions CI/CD pipeline definition
+│       └── devsecops.yml
 ├── scripts/
-│   └── ai_remediator.py        # Gemini 1.5 Flash AI script for vulnerability auto-patching
-├── scratch_imgly/
-│   ├── package.json            # Subfolder Node.js package (Monitored & Auto-Remediated)
-│   └── package-lock.json       # Subfolder lockfile
-├── public/                     # Static assets and Web App Frontend
-├── package.json                # Root Node.js dependencies
-└── README.md                   # Technical DevSecOps Documentation
+│   ├── ai_iac_healer.py
+│   ├── ai_red_teamer.py
+│   ├── ai_remediator.py
+│   └── ai_zero_trust_policy.py
+├── Dockerfile
+├── html.tpl
+├── package.json
+├── package-lock.json
+└── README.md
 ```
-
----
-
-## Execution Workflow
-
-1. **Trigger Event:** A developer pushes code or submits a Pull Request.
-2. **Security Audit:** TruffleHog checks for leaked keys; Trivy scans root and subfolder lockfiles across all severities.
-3. **AI Remediation:** If vulnerabilities are found, `ai_remediator.py` requests precise update commands from Gemini 1.5 Flash, runs them locally on the runner, and commits only the modified `package.json` files.
-# Auto AI-Remediator Secured with Advanced Self-Healing DevSecOps CI/CD Pipeline
-
-
 
 ## License
 
