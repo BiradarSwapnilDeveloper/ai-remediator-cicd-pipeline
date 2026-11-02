@@ -111,6 +111,12 @@ jobs:
           command: test
           args: --severity-threshold=high --json-file-output=snyk-results.json
 
+      - name: "Download Trivy JSON Report for AI"
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-report-json
+          path: .
+
       # ==========================================
       # 🥷 NEW FEATURE: AI Red Teamer (Option 1)
       # ==========================================
