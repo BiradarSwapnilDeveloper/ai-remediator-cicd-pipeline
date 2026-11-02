@@ -1,27 +1,31 @@
 FROM node:20.18.1-alpine3.20 AS build
 
+WORKDIR /usr/src/app
+
+RUN chown node:node /usr/src/app
+
 USER node
-WORKDIR /home/node/app
 
 COPY --chown=node:node package*.json ./
 
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
-FROM node:20.18.1-alpine3.20
+FROM node:20.18.1-alpine3.20 AS runner
 
-RUN apk update && \
-    apk upgrade --no-cache && \
+ENV NODE_ENV=production \
+    PORT=3000
+
+RUN apk update && apk upgrade --no-cache && \
     apk add --no-cache tini && \
-    rm -rf /var/cache/apk/*
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn* /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
+    mkdir -p /usr/src/app && chown -R node:node /usr/src/app
 
-WORKDIR /home/node/app
+WORKDIR /usr/src/app
 
-ENV NODE_ENV=production
+USER node
 
-COPY --chown=1000:1000 --from=build /home/node/app/node_modules ./node_modules
-COPY --chown=1000:1000 . .
-
-USER 1000:1000
+COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node . .
 
 EXPOSE 3000
 

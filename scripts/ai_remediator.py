@@ -21,10 +21,10 @@ def log_debug(msg):
 def send_telegram_msg(msg):
     bot_token = TELEGRAM_BOT_TOKEN.strip() if TELEGRAM_BOT_TOKEN else ""
     chat_id = TELEGRAM_CHAT_ID.strip() if TELEGRAM_CHAT_ID else ""
-    
+
     if bot_token.startswith("bot"):
         bot_token = bot_token[3:]
-        
+
     if not bot_token or not chat_id:
         log_debug("Telegram credentials missing. Skipping message.")
         return
@@ -61,7 +61,7 @@ def extract_vulnerabilities(report):
                     installed = vuln.get("InstalledVersion", "unknown")
                     fixed = vuln.get("FixedVersion", "unknown")
                     severity = vuln.get("Severity", "unknown")
-                    
+
                     if fixed != "unknown" and fixed != "":
                         vuln_summary.append(f"Target File: {target}, Package: {pkg}, Installed: {installed}, Fixed in: {fixed}, Severity: {severity}")
     return "\n".join(set(vuln_summary))
@@ -70,9 +70,9 @@ def ask_gemini_for_fix(vuln_details):
     if not vuln_details:
         log_debug("No fixable vulnerabilities found.")
         return None
-        
+
     log_debug("Sending to Gemini:\n" + vuln_details)
-    
+
     prompt = f"""You are a DevSecOps Expert. Read this list of vulnerabilities.
 Your ONLY job is to provide exact terminal commands to update the vulnerable packages to their 'Fixed in' versions.
 
@@ -88,7 +88,7 @@ Vulnerabilities:
 
     api_key = GEMINI_API_KEY.strip() if GEMINI_API_KEY else ""
     client = genai.Client(api_key=api_key)
-    
+
     for attempt in range(3):
         try:
             response = client.models.generate_content(
@@ -104,7 +104,7 @@ Vulnerabilities:
                 time.sleep(5)
             else:
                 return None
-                
+
     log_debug("Failed after 3 retries due to high demand.")
     return None
 
@@ -125,10 +125,10 @@ def apply_ai_fix(commands_text):
                         log_debug(f"Failed to execute: {cmd}\n{res.stderr.decode('utf-8')}")
                 else:
                     log_debug(f"Ignored non-npm command: {cmd}")
-                    
+
             if success_count == 0:
                 log_debug("No valid npm commands were executed! Running guaranteed fallback fix...")
-            
+
             # GUARANTEE SNYK PASS FOR DEMO: Always run this to ensure perfect versions even if AI hallucinated wrong ones
             subprocess.run("npm install lodash@4.18.1 express@4.22.0 qs@6.14.2 axios@1.19.0 mongoose@6.13.9 multer@2.2.0 body-parser@1.20.4 --save", shell=True, capture_output=True)
             return True
@@ -142,20 +142,20 @@ def apply_ai_fix(commands_text):
 if __name__ == "__main__":
     trivy_data = read_trivy_report()
     run_url = f"https://github.com/{GITHUB_REPO}/actions/runs/{GITHUB_RUN_ID}"
-    
+
     if trivy_data:
         vuln_details = extract_vulnerabilities(trivy_data)
-        
+
         # Scenario 1: No fixable vulnerabilities
         if not vuln_details:
             msg = f"✅ PixelCraft AI Security Report ✅\n\n📌 Branch: {GITHUB_BRANCH}\n✨ Status: All security checks passed! Zero fixable vulnerabilities found.\n\n🔗 View Run: {run_url}"
             send_telegram_msg(msg)
             sys.exit(0)
-            
+
         # Scenario 2: Vulnerabilities found
         alert_msg = f"🚨 PixelCraft AI Security Alert! 🚨\n\n📌 Branch: {GITHUB_BRANCH}\n⚠️ Status: Vulnerabilities detected!\n\n📋 Findings:\n{vuln_details[:800]}...\n\n🤖 Gemini AI is currently analyzing and generating fixes..."
         send_telegram_msg(alert_msg)
-        
+
         ai_solution = ask_gemini_for_fix(vuln_details)
         if ai_solution:
             success = apply_ai_fix(ai_solution)
